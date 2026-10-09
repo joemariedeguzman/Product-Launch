@@ -169,7 +169,7 @@ const toast=m=>{const t=$("toast");t.textContent=m;t.style.display="block";clear
 function iv(el){const v=parseInt(String(el.value).replace(/\D/g,""),10);return isNaN(v)?0:v}
 function esc(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 let STOCK=null;
-const PRICE_DEFAULT={"E1": 3294.0, "E2": 3942.0, "E3": 2937.6, "E4": 3417.0, "E5": null, "E6": 3643.2, "E7": 4947.0, "E8": 6375.0, "E9": 3078.0, "N1": 3642.86, "N2": 3286.96, "N3": 3913.04, "N4": 3128.57, "N5": 3578.57, "N6": 4643.48};
+const PRICE_DEFAULT={"E1": 2898.37, "E2": 3421.86, "E3": 2937.6, "E4": 3000.51, "E5": null, "E6": 3643.2, "E7": 4947.0, "E8": 6375.0, "E9": 3078.0, "N1": 3642.86, "N2": 3286.96, "N3": 3913.04, "N4": 3128.57, "N5": 3578.57, "N6": 4643.48};
 let PRICE={...PRICE_DEFAULT};
 const price=k=>(typeof PRICE[k]==="number"&&PRICE[k]>0)?PRICE[k]:null;
 function buildList(id,list,rate){
