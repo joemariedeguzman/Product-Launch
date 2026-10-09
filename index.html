@@ -265,7 +265,7 @@ async function loadStock(){
   }catch(e){$("stockNote").textContent="Stock couldn't be loaded. Check the internet connection; it retries automatically.";}
 }
 updateSummary();applyStock();loadStock();
-setInterval(()=>{if(!document.hidden&&$("done").hidden)loadStock();},15000);
+setInterval(()=>{if(!document.hidden&&$("done").hidden)loadStock();},30000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadStock();});
 })();
 </script>
