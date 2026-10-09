@@ -59,7 +59,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid v
 .stepper{display:flex;align-items:center;background:#fff;border-radius:10px;overflow:hidden}
 .stepper button{border:0;background:transparent;font:inherit;font-size:22px;font-weight:700;width:44px;height:44px;cursor:pointer;color:#012039}
 .stepper input{width:58px;min-height:44px;border:0;border-radius:0;text-align:center;font-weight:800;background:#fff;color:#012039;padding:0}
-.summary{position:sticky;bottom:0;background:var(--navy);color:#fff;border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:center;margin-bottom:16px;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+.summary{position:sticky;bottom:0;background:var(--navy);color:#fff;border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:center;margin-bottom:16px;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
 .summary .k{font-size:12px;opacity:.8}.summary .v{font-size:20px;font-weight:800}
 .summary .v.big{color:var(--yellow);font-size:24px}
 .status{grid-column:1/-1;font-size:14px;font-weight:700;padding:8px 10px;border-radius:8px}
@@ -87,7 +87,7 @@ td.num,th.num{text-align:right}
 .del{border:0;background:transparent;color:var(--bad);font:inherit;font-weight:700;cursor:pointer;padding:4px}
 .empty{padding:28px;text-align:center;color:var(--muted)}
 [hidden]{display:none!important}
-@media (max-width:640px){.grid,.cartons{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi.hl{grid-column:1/-1}.summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.grid,.cartons{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi.hl{grid-column:1/-1}.summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;padding:10px 14px}.summary .v{font-size:16px}.summary .v.big{font-size:20px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -134,9 +134,10 @@ td.num,th.num{text-align:right}
         </div>
       </fieldset>
       <div class="summary" aria-live="polite">
-        <div><div class="k">Cartons</div><div class="v" id="sCtn">0</div></div>
-        <div><div class="k">Liters</div><div class="v" id="sLit">0</div></div>
-        <div><div class="k">Discount</div><div class="v big" id="sDisc">₱0.00</div></div>
+        <div><div class="k">Cases · liters</div><div class="v" id="sCtn">0</div></div>
+        <div><div class="k">Original amount</div><div class="v" id="sOrig">₱0.00</div></div>
+        <div><div class="k">Discount</div><div class="v" id="sDisc">₱0.00</div></div>
+        <div><div class="k">Balance to pay</div><div class="v big" id="sBal">₱0.00</div></div>
         <div class="status no" id="sStatus">Add at least 2 cartons</div>
       </div>
       <div class="err" id="formErr" role="alert"></div>
@@ -152,7 +153,7 @@ td.num,th.num{text-align:right}
       <button class="btn primary" type="button" id="againBtn" style="max-width:320px">Place another order</button>
     </fieldset>
   </section>
-<p style="text-align:center;font-size:12px;color:var(--muted);margin:0 0 24px">Form version 5 · live stock</p>
+<p style="text-align:center;font-size:12px;color:var(--muted);margin:0 0 24px">Form version 6 · live stock</p>
 </main>
 <div class="toast" id="toast" role="status"></div>
 <script>
@@ -166,13 +167,19 @@ const num=(n,d=0)=>Number(n||0).toLocaleString("en-PH",{minimumFractionDigits:d,
 
 const toast=m=>{const t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>t.style.display="none",3000)};
 function iv(el){const v=parseInt(String(el.value).replace(/\D/g,""),10);return isNaN(v)?0:v}
+function esc(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 let STOCK=null;
+const PRICE_DEFAULT={"E1": 3294.0, "E2": 3942.0, "E3": 2937.6, "E4": 3417.0, "E5": null, "E6": 3643.2, "E7": 4947.0, "E8": 6375.0, "E9": 3078.0, "N1": 3642.86, "N2": 3286.96, "N3": 3913.04, "N4": 3128.57, "N5": 3578.57, "N6": 4643.48};
+let PRICE={...PRICE_DEFAULT};
+const price=k=>(typeof PRICE[k]==="number"&&PRICE[k]>0)?PRICE[k]:null;
 function buildList(id,list,rate){
-  $(id).innerHTML=list.map(p=>{const k=p[0], off=(p[3]*rate);return `<div class="sku" id="row-${k}"><div><div class="nm">${p[1]}</div><div class="mt">${p[2]} · ₱${off.toLocaleString("en-PH",{maximumFractionDigits:2})} off per carton</div><div class="stk" id="stk-${k}">Checking stock…</div></div><div class="stepper"><button type="button" data-k="${k}" data-d="-1" aria-label="Remove one carton of ${p[1]} ${p[2]}">−</button><input id="${k}" data-k="${k}" inputmode="numeric" value="0" aria-label="Cartons of ${p[1]} ${p[2]}"><button type="button" data-k="${k}" data-d="1" aria-label="Add one carton of ${p[1]} ${p[2]}">+</button></div></div>`}).join("");
+  $(id).innerHTML=list.map(p=>{const k=p[0], off=(p[3]*rate);return `<div class="sku" id="row-${k}"><div><div class="nm">${p[1]}</div><div class="mt">${p[2]} · <span id="pr-${k}"></span> · ₱${off.toLocaleString("en-PH",{maximumFractionDigits:2})} off per case</div><div class="stk" id="stk-${k}">Checking stock…</div></div><div class="stepper"><button type="button" data-k="${k}" data-d="-1" aria-label="Remove one carton of ${p[1]} ${p[2]}">−</button><input id="${k}" data-k="${k}" inputmode="numeric" value="0" aria-label="Cartons of ${p[1]} ${p[2]}"><button type="button" data-k="${k}" data-d="1" aria-label="Add one carton of ${p[1]} ${p[2]}">+</button></div></div>`}).join("");
 }
 buildList("exList",EX,R.ex);buildList("nwList",NW,R.nw);
 function avail(k){return STOCK&&typeof STOCK[k]==="number"?STOCK[k]:null}
+function showPrices(){[...EX,...NW].forEach(p=>{const v=price(p[0]);$("pr-"+p[0]).textContent=v?peso(v)+" per case":"Price to be confirmed";});}
 function applyStock(){
+  showPrices();
   let clamped=[];
   [...EX,...NW].forEach(p=>{const k=p[0],a=avail(k),row=$("row-"+k),inp=$(k),el=$("stk-"+k);
     const out=a!==null&&a<=0, unknown=a===null;
@@ -186,7 +193,7 @@ function applyStock(){
 }
 function readItems(){
   const out=[];
-  [[EX,"Existing"],[NW,"New"]].forEach(([list,cat])=>list.forEach(p=>{const q=iv($(p[0]));$("row-"+p[0]).classList.toggle("on",q>0);if(q>0)out.push({id:p[0],category:cat,sku:p[1],pack:p[2],litersPerCarton:p[3],cartons:q});}));
+  [[EX,"Existing"],[NW,"New"]].forEach(([list,cat])=>list.forEach(p=>{const q=iv($(p[0]));$("row-"+p[0]).classList.toggle("on",q>0);if(q>0)out.push({id:p[0],category:cat,sku:p[1],pack:p[2],litersPerCarton:p[3],cartons:q,price:price(p[0])});}));
   return out;
 }
 function calc(o){
@@ -200,7 +207,10 @@ function calc(o){
   if(ctn<R.min) reason="Below minimum 2 cartons";
   else if(o.orderDate!==R.event) reason="Not ordered on launch day";
   else if(o.deliveryDate && o.deliveryDate>R.deadline) reason="Delivery after Oct 31";
-  return {ctn,exC,nwC,exL:Math.round(exL*100)/100,nwL:Math.round(nwL*100)/100,lit:Math.round((exL+nwL)*100)/100,exD:Math.round(exD*100)/100,nwD:Math.round(nwD*100)/100,disc:Math.round((exD+nwD)*100)/100,qualified:reason?"No":"Yes",reason};
+  const orig=it.reduce((a,x)=>a+(x.price?x.cartons*x.price:0),0), tbc=it.some(x=>!x.price);
+  const applied=reason?0:Math.round((exD+nwD)*100)/100;
+  const amounts={orig:Math.round(orig*100)/100,applied,balance:Math.round((orig-applied)*100)/100,tbc};
+  return {...amounts,ctn,exC,nwC,exL:Math.round(exL*100)/100,nwL:Math.round(nwL*100)/100,lit:Math.round((exL+nwL)*100)/100,exD:Math.round(exD*100)/100,nwD:Math.round(nwD*100)/100,disc:Math.round((exD+nwD)*100)/100,qualified:reason?"No":"Yes",reason};
 }
 function readForm(){
   return {distributor:$("distributor").value.trim(),customerType:$("ctype").value,customerName:$("cname").value.trim(),
@@ -210,10 +220,10 @@ function readForm(){
 }
 function updateSummary(){
   const o=readForm(), c=calc(o);
-  $("sCtn").textContent=num(c.ctn);$("sLit").textContent=num(c.lit,1);$("sDisc").textContent=peso(c.disc);
+  $("sCtn").textContent=num(c.ctn)+" · "+num(c.lit,1)+" L";$("sOrig").textContent=peso(c.orig);$("sDisc").textContent=(c.applied?"−":"")+peso(c.applied);$("sBal").textContent=peso(c.balance);
   const s=$("sStatus");
-  if(c.qualified==="Yes"){s.className="status ok";s.textContent="Qualifies for the Launch Saver discount";}
-  else{s.className="status no";s.textContent="Does not qualify: "+c.reason.toLowerCase();}
+  if(c.qualified==="Yes"){s.className="status ok";s.textContent="Qualifies for the launch discount"+(c.tbc?". Amounts exclude items with price to be confirmed.":"");}
+  else{s.className="status no";s.textContent="No discount: "+c.reason.toLowerCase()+(c.tbc?". Amounts exclude items with price to be confirmed.":"");}
 }
 document.querySelector(".cartons").addEventListener("click",e=>{const b=e.target.closest("button[data-k]");if(!b||b.disabled)return;const k=b.dataset.k,i=$(k),a=avail(k);let v=Math.max(0,iv(i)+parseInt(b.dataset.d,10));if(a!==null&&v>a){v=a;toast("Only "+num(a)+" cases left");}i.value=v;updateSummary();});
 document.querySelector(".cartons").addEventListener("input",e=>{const i=e.target.closest("input[data-k]");if(!i)return;i.value=String(i.value).replace(/\D/g,"");const a=avail(i.dataset.k);if(a!==null&&iv(i)>a){i.value=String(a);toast("Only "+num(a)+" cases left");}updateSummary();});
@@ -247,7 +257,7 @@ $("f").addEventListener("submit",async e=>{
     const j=await r.json();
     if(j.stock){STOCK=j.stock;applyStock();}
     if(!j.ok)throw new Error(j.error||"The order wasn't accepted.");
-    $("doneMsg").textContent=(j.qualified==="Yes"?"Launch Saver discount: "+peso(j.discount):"This order doesn't qualify for the Launch Saver discount: "+String(j.reason||"").toLowerCase()+".");
+    $("doneMsg").innerHTML="Original amount: <strong>"+peso(j.original||0)+"</strong><br>Discount: <strong>"+peso(j.discount||0)+"</strong><br>Balance to pay: <strong>"+peso(j.balance!=null?j.balance:(j.original||0)-(j.discount||0))+"</strong>"+(j.qualified==="Yes"?"":"<br><span style=\"font-size:14px\">No discount: "+esc(String(j.reason||"").toLowerCase())+".</span>");
     $("doneRef").textContent=j.ref;
     $("p-form").hidden=true;$("done").hidden=false;window.scrollTo({top:0});
   }catch(err){
@@ -261,7 +271,7 @@ async function loadStock(){
     const r=await fetch(SCRIPT_URL+"?action=stock&t="+Date.now());const j=await r.json();
     if(j.ok&&!j.stock){$("stockNote").textContent="The order sheet is running an older script. In Apps Script, deploy a new version of the updated Code.gs.";return;}
     if(!j.ok||!j.stock)throw new Error();
-    STOCK=j.stock;applyStock();
+    STOCK=j.stock;if(j.prices){Object.keys(j.prices).forEach(k=>{if(typeof j.prices[k]==="number"&&j.prices[k]>0)PRICE[k]=j.prices[k];});}applyStock();
     $("stockNote").textContent="Live stock, updated "+new Date().toLocaleTimeString("en-PH",{hour:"numeric",minute:"2-digit",second:"2-digit"})+". Orders are deducted as soon as they are submitted.";
   }catch(e){$("stockNote").textContent="Stock couldn't be loaded. Check the internet connection; it retries automatically.";}
 }
