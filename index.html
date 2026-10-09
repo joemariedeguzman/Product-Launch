@@ -50,6 +50,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid v
 .sku{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(255,255,255,.28)}
 .line.nw .sku{border-top-color:rgba(1,32,57,.16)}
 .sku>div:first-child{min-width:0;flex:1}.sku .stepper{flex-shrink:0}
+.sku .stk{font-size:12px;font-weight:700;margin-top:3px}.sku.out{opacity:.5}.sku.out .stk{text-decoration:none}.sku button:disabled,.sku input:disabled{cursor:not-allowed}
 .sku .nm{font-size:14px;font-weight:700;line-height:1.25}.sku .mt{font-size:12px;opacity:.85;margin-top:2px}
 .sku.on .nm::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:middle}.line .sub{font-size:13px;margin:0 0 10px;opacity:.9}
 .step{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
@@ -105,7 +106,7 @@ td.num,th.num{text-align:right}
         <legend>Customer</legend>
         <div class="grid">
           <div id="codeWrap" class="full"><label class="req" for="ecode">Event code</label><input id="ecode" autocomplete="off" autocapitalize="characters" placeholder="Code announced at the launch"></div>
-          <div style="position:absolute;left:-9999px" aria-hidden="true"><label for="website">Website</label><input id="website" tabindex="-1" autocomplete="off"></div>
+          <div style="position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden" aria-hidden="true"><label for="lsxq">Leave empty</label><input id="lsxq" name="lsxq" type="text" tabindex="-1" autocomplete="new-password" data-lpignore="true" data-form-type="other"></div>
           <div><label class="req" for="distributor">Distributor</label><input id="distributor" autocomplete="off" required></div>
           <div><label class="req" for="ctype">Customer type</label><select id="ctype" required><option value="">Choose one</option><option>Retail</option><option>IWS</option><option>Motor shop</option><option>Sub-distributor</option></select></div>
           <div><label class="req" for="cname">Customer or outlet name</label><input id="cname" required></div>
@@ -117,8 +118,9 @@ td.num,th.num{text-align:right}
       </fieldset>
       <fieldset>
         <legend>Cartons ordered</legend>
+        <p id="stockNote" style="clear:both;margin:0 0 12px;font-size:13px;color:var(--muted)">Loading live stock…</p>
         <div class="cartons">
-          <div class="line ex"><h3>Existing product lines</h3><p class="sub">₱5 off per liter: ₱60 per 12 × 1 L carton, ₱48 per 12 × 0.8 L carton</p><div id="exList"></div></div>
+          <div class="line ex"><h3>Old products (existing lines)</h3><p class="sub">₱5 off per liter: ₱60 per 12 × 1 L carton, ₱48 per 12 × 0.8 L carton</p><div id="exList"></div></div>
           <div class="line nw"><h3>New products</h3><p class="sub">₱2 off per liter: ₱24 per 12 × 1 L carton, ₱19.20 per 12 × 0.8 L carton</p><div id="nwList"></div></div>
         </div>
       </fieldset>
@@ -154,21 +156,35 @@ td.num,th.num{text-align:right}
 <script>
 (function(){
 const R={ex:5,nw:2,min:2,event:"2026-10-09",deadline:"2026-10-31"};
-const EX=[["RIDER 4T 20W-40","12 × 0.8 L",9.6],["RIDER MATIC MB 4T 10W-30","12 × 0.8 L",9.6],["SMARTER MATIC MB 4T 10W-30","12 × 1 L",12],["SMARTER SCOOTER MB 4T 10W-40","12 × 1 L",12],["SMARTER SCOOTER MB 4T 5W-40","12 × 1 L",12],["SMARTER SYNTHETIC 4T 10W-40","12 × 1 L",12]];
-const NW=[["URBAN SCOOTER MB 4T 5W-40","12 × 1 L",12],["URBAN SCOOTER MB 4T 5W-30","12 × 1 L",12],["URBAN SCOOTER MB 4T 10W-40","12 × 1 L",12],["URBAN SCOOTER MB 4T 10W-30","12 × 1 L",12],["URBAN 4T 20W-40","12 × 0.8 L",9.6],["URBAN 4T 20W-40","12 × 1 L",12],["URBAN 4T 10W-40","12 × 0.8 L",9.6],["URBAN 4T 10W-40","12 × 1 L",12],["RIDER SCOOTER MB 4T 10W-40","12 × 1 L",12],["RIDER SCOOTER MB 4T 10W-40","12 × 0.8 L",9.6],["RIDER HIGH MILEAGE 4T 20W-50","12 × 1 L",12]];
+const EX=[["E1", "RIDER 4T 20W-40", "12 × 0.8 L", 9.6], ["E2", "RIDER 4T 20W-50", "12 × 1 L", 12], ["E3", "RIDER MATIC MB 4T 10W-30", "12 × 0.8 L", 9.6], ["E4", "RIDER SCOOTER MB 4T 10W-40", "12 × 0.8 L", 9.6], ["E5", "SMARTER MATIC MB 4T 10W-30", "12 × 1 L", 12], ["E6", "SMARTER SCOOTER MB 4T 10W-40", "12 × 1 L", 12], ["E7", "SMARTER SCOOTER MB 4T 5W-40", "12 × 1 L", 12], ["E8", "SMARTER SYNTHETIC 4T 10W-40", "12 × 1 L", 12], ["E9", "RIDER TOWN 4T SAE 40", "12 × 1 L", 12]];
+const NW=[["N1", "RIDER HIGH MILEAGE 4T 20W-50", "12 × 1 L", 12], ["N2", "URBAN 4T 10W-40", "12 × 0.8 L", 9.6], ["N3", "URBAN 4T 10W-40", "12 × 1 L", 12], ["N4", "URBAN 4T 20W-40", "12 × 0.8 L", 9.6], ["N5", "URBAN 4T 20W-40", "12 × 1 L", 12], ["N6", "URBAN SCOOTER MB 4T 10W-40", "12 × 1 L", 12]];
 const $=id=>document.getElementById(id);
 const peso=n=>"₱"+Number(n||0).toLocaleString("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2});
 const num=(n,d=0)=>Number(n||0).toLocaleString("en-PH",{minimumFractionDigits:d,maximumFractionDigits:d});
 
 const toast=m=>{const t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>t.style.display="none",3000)};
 function iv(el){const v=parseInt(String(el.value).replace(/\D/g,""),10);return isNaN(v)?0:v}
-function buildList(id,cat,list,rate){
-  $(id).innerHTML=list.map((p,i)=>{const k=cat+i, off=(p[2]*rate);return `<div class="sku" id="row-${k}"><div><div class="nm">${p[0]}</div><div class="mt">${p[1]} · ₱${off.toLocaleString("en-PH",{maximumFractionDigits:2})} off per carton</div></div><div class="stepper"><button type="button" data-k="${k}" data-d="-1" aria-label="Remove one carton of ${p[0]} ${p[1]}">−</button><input id="${k}" data-k="${k}" inputmode="numeric" value="0" aria-label="Cartons of ${p[0]} ${p[1]}"><button type="button" data-k="${k}" data-d="1" aria-label="Add one carton of ${p[0]} ${p[1]}">+</button></div></div>`}).join("");
+let STOCK=null;
+function buildList(id,list,rate){
+  $(id).innerHTML=list.map(p=>{const k=p[0], off=(p[3]*rate);return `<div class="sku" id="row-${k}"><div><div class="nm">${p[1]}</div><div class="mt">${p[2]} · ₱${off.toLocaleString("en-PH",{maximumFractionDigits:2})} off per carton</div><div class="stk" id="stk-${k}">Checking stock…</div></div><div class="stepper"><button type="button" data-k="${k}" data-d="-1" aria-label="Remove one carton of ${p[1]} ${p[2]}">−</button><input id="${k}" data-k="${k}" inputmode="numeric" value="0" aria-label="Cartons of ${p[1]} ${p[2]}"><button type="button" data-k="${k}" data-d="1" aria-label="Add one carton of ${p[1]} ${p[2]}">+</button></div></div>`}).join("");
 }
-buildList("exList","e",EX,R.ex);buildList("nwList","n",NW,R.nw);
+buildList("exList",EX,R.ex);buildList("nwList",NW,R.nw);
+function avail(k){return STOCK&&typeof STOCK[k]==="number"?STOCK[k]:null}
+function applyStock(){
+  let clamped=[];
+  [...EX,...NW].forEach(p=>{const k=p[0],a=avail(k),row=$("row-"+k),inp=$(k),el=$("stk-"+k);
+    const out=a!==null&&a<=0, unknown=a===null;
+    row.classList.toggle("out",out);
+    row.querySelectorAll("button,input").forEach(x=>x.disabled=out||unknown);
+    el.textContent=unknown?"Checking stock…":out?"Out of stock":num(a)+" cases left";
+    if(!unknown&&iv(inp)>Math.max(0,a)){inp.value=String(Math.max(0,a));clamped.push(p[1]+" "+p[2]);}
+  });
+  if(clamped.length)toast("Stock changed. Reduced: "+clamped.join(", "));
+  updateSummary();
+}
 function readItems(){
   const out=[];
-  [["e",EX,"Existing"],["n",NW,"New"]].forEach(([c,list,cat])=>list.forEach((p,i)=>{const q=iv($(c+i));$("row-"+c+i).classList.toggle("on",q>0);if(q>0)out.push({category:cat,sku:p[0],pack:p[1],litersPerCarton:p[2],cartons:q});}));
+  [[EX,"Existing"],[NW,"New"]].forEach(([list,cat])=>list.forEach(p=>{const q=iv($(p[0]));$("row-"+p[0]).classList.toggle("on",q>0);if(q>0)out.push({id:p[0],category:cat,sku:p[1],pack:p[2],litersPerCarton:p[3],cartons:q});}));
   return out;
 }
 function calc(o){
@@ -197,8 +213,8 @@ function updateSummary(){
   if(c.qualified==="Yes"){s.className="status ok";s.textContent="Qualifies for the Launch Saver discount";}
   else{s.className="status no";s.textContent="Does not qualify: "+c.reason.toLowerCase();}
 }
-document.querySelector(".cartons").addEventListener("click",e=>{const b=e.target.closest("button[data-k]");if(!b)return;const i=$(b.dataset.k);i.value=Math.max(0,iv(i)+parseInt(b.dataset.d,10));updateSummary();});
-document.querySelector(".cartons").addEventListener("input",e=>{const i=e.target.closest("input[data-k]");if(!i)return;i.value=String(i.value).replace(/\D/g,"");updateSummary();});
+document.querySelector(".cartons").addEventListener("click",e=>{const b=e.target.closest("button[data-k]");if(!b||b.disabled)return;const k=b.dataset.k,i=$(k),a=avail(k);let v=Math.max(0,iv(i)+parseInt(b.dataset.d,10));if(a!==null&&v>a){v=a;toast("Only "+num(a)+" cases left");}i.value=v;updateSummary();});
+document.querySelector(".cartons").addEventListener("input",e=>{const i=e.target.closest("input[data-k]");if(!i)return;i.value=String(i.value).replace(/\D/g,"");const a=avail(i.dataset.k);if(a!==null&&iv(i)>a){i.value=String(a);toast("Only "+num(a)+" cases left");}updateSummary();});
 $("f").addEventListener("input",updateSummary);$("f").addEventListener("change",updateSummary);
 function clearForm(keepDist){
   const d=$("distributor").value,ec=$("ecode").value;$("f").reset();$("ecode").value=ec;$("odate").value=R.event;
@@ -222,11 +238,12 @@ $("f").addEventListener("submit",async e=>{
   if(miss.length){$("formErr").textContent="Fill in the "+miss.join(", ")+" to submit this order.";return;}
   if(!configured){$("formErr").textContent="This order form isn't connected yet. The organizer needs to add the web app link.";return;}
   const c=calc(o);
-  const payload={eventCode:$("ecode").value.trim(),website:$("website").value,distributor:o.distributor,customerType:o.customerType,customerName:o.customerName,contact:o.contact,mobile:o.mobile,address:o.address,orderDate:o.orderDate,deliveryDate:o.deliveryDate,remarks:o.remarks,items:o.items.map(x=>({category:x.category,sku:x.sku,pack:x.pack,cartons:x.cartons}))};
+  const payload={eventCode:$("ecode").value.trim(),website:$("lsxq").value,distributor:o.distributor,customerType:o.customerType,customerName:o.customerName,contact:o.contact,mobile:o.mobile,address:o.address,orderDate:o.orderDate,deliveryDate:o.deliveryDate,remarks:o.remarks,items:o.items.map(x=>({id:x.id,category:x.category,sku:x.sku,pack:x.pack,cartons:x.cartons}))};
   $("saveBtn").disabled=true;$("saveBtn").textContent="Submitting…";$("formErr").textContent="";
   try{
     const r=await fetch(SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
     const j=await r.json();
+    if(j.stock){STOCK=j.stock;applyStock();}
     if(!j.ok)throw new Error(j.error||"The order wasn't accepted.");
     $("doneMsg").textContent=(j.qualified==="Yes"?"Launch Saver discount: "+peso(j.discount):"This order doesn't qualify for the Launch Saver discount: "+String(j.reason||"").toLowerCase()+".");
     $("doneRef").textContent=j.ref;
@@ -235,8 +252,19 @@ $("f").addEventListener("submit",async e=>{
     $("formErr").textContent=(err&&err.message&&!/fetch|network/i.test(err.message))?err.message:"The order wasn't sent. Check the internet connection and submit again.";
   }finally{$("saveBtn").disabled=false;$("saveBtn").textContent="Submit order";}
 });
-$("againBtn").addEventListener("click",()=>{clearForm(false);$("ecode").value=$("ecode").value;$("done").hidden=true;$("p-form").hidden=false;window.scrollTo({top:0});});
-updateSummary();
+$("againBtn").addEventListener("click",()=>{clearForm(false);$("done").hidden=true;$("p-form").hidden=false;loadStock();window.scrollTo({top:0});});
+async function loadStock(){
+  if(!configured){$("stockNote").textContent="Stock can't be shown until the form is connected.";return;}
+  try{
+    const r=await fetch(SCRIPT_URL+"?action=stock&t="+Date.now());const j=await r.json();
+    if(!j.ok||!j.stock)throw new Error();
+    STOCK=j.stock;applyStock();
+    $("stockNote").textContent="Live stock, updated "+new Date().toLocaleTimeString("en-PH",{hour:"numeric",minute:"2-digit",second:"2-digit"})+". Orders are deducted as soon as they are submitted.";
+  }catch(e){$("stockNote").textContent="Stock couldn't be loaded. Check the internet connection; it retries automatically.";}
+}
+updateSummary();applyStock();loadStock();
+setInterval(()=>{if(!document.hidden&&$("done").hidden)loadStock();},15000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadStock();});
 })();
 </script>
 </body>
